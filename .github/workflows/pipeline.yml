@@ -1,0 +1,51 @@
+name: Rental Marketplace Analytics Pipeline
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Monday 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate synthetic data
+        run: |
+          cd src
+          python3 generate_synthetic_data.py --scale demo
+          python3 ingest_realtor_data.py
+
+      - name: Load warehouse
+        run: cd src && python3 load_to_snowflake.py
+
+      - name: Run SQL pipeline (staging -> intermediate -> marts)
+        run: cd src && python3 run_sql_pipeline.py
+
+      - name: Validate data quality
+        run: cd src && python3 validate_data.py
+
+      - name: Run smoke tests
+        run: cd tests && python3 test_pipeline.py
+
+      - name: Export dashboard data
+        run: cd src && python3 export_dashboard_data.py
+
+      - name: Upload warehouse + dashboard as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rental-marketplace-analytics-build
+          path: |
+            data/warehouse.db
+            dashboard/data.json
+            dashboard/rental_marketplace_dashboard.html

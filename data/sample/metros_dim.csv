@@ -1,0 +1,26 @@
+metro_name,demand_score,supply_score,market_strength,metro_id
+"Austin, TX",82,55,1.25,M001
+"Dallas, TX",76,60,1.1,M002
+"Phoenix, AZ",79,52,1.15,M003
+"Tampa, FL",84,48,1.2,M004
+"Charlotte, NC",77,58,1.05,M005
+"Nashville, TN",81,50,1.15,M006
+"Raleigh, NC",78,54,1.05,M007
+"Columbus, OH",68,62,0.9,M008
+"Indianapolis, IN",62,65,0.8,M009
+"Kansas City, MO",60,68,0.75,M010
+"Denver, CO",73,57,1.1,M011
+"Seattle, WA",75,45,1.3,M012
+"Portland, OR",65,55,1.0,M013
+"Atlanta, GA",80,53,1.15,M014
+"Orlando, FL",83,47,1.15,M015
+"San Antonio, TX",70,63,0.9,M016
+"Sacramento, CA",71,49,1.2,M017
+"Las Vegas, NV",74,52,1.1,M018
+"Salt Lake City, UT",72,56,1.05,M019
+"Boise, ID",69,58,0.95,M020
+"Minneapolis, MN",58,66,0.75,M021
+"Pittsburgh, PA",52,70,0.65,M022
+"Cleveland, OH",50,72,0.6,M023
+"Memphis, TN",55,69,0.7,M024
+"Jacksonville, FL",75,55,1.05,M025

@@ -1,0 +1,51 @@
+month,channel,market,campaign,impressions,clicks,spend,signups
+2022-01,content_seo,"Atlanta, GA",content_seo_2022-01,2372,62,87.65,5
+2022-01,content_seo,"Austin, TX",content_seo_2022-01,1880,99,82.66,5
+2022-01,content_seo,"Boise, ID",content_seo_2022-01,1145,37,36.75,2
+2022-01,content_seo,"Charlotte, NC",content_seo_2022-01,1078,35,38.51,2
+2022-01,content_seo,"Cleveland, OH",content_seo_2022-01,358,11,14.45,1
+2022-01,content_seo,"Columbus, OH",content_seo_2022-01,804,39,48.29,3
+2022-01,content_seo,"Dallas, TX",content_seo_2022-01,953,35,46.1,3
+2022-01,content_seo,"Denver, CO",content_seo_2022-01,381,10,18.86,1
+2022-01,content_seo,"Jacksonville, FL",content_seo_2022-01,2401,88,94.65,5
+2022-01,content_seo,"Kansas City, MO",content_seo_2022-01,1543,46,51.36,3
+2022-01,content_seo,"Las Vegas, NV",content_seo_2022-01,2605,81,87.6,5
+2022-01,content_seo,"Memphis, TN",content_seo_2022-01,831,52,55.09,4
+2022-01,content_seo,"Minneapolis, MN",content_seo_2022-01,747,35,29.36,2
+2022-01,content_seo,"Nashville, TN",content_seo_2022-01,1177,66,89.35,5
+2022-01,content_seo,"Orlando, FL",content_seo_2022-01,2761,71,106.02,6
+2022-01,content_seo,"Phoenix, AZ",content_seo_2022-01,613,21,37.88,2
+2022-01,content_seo,"Pittsburgh, PA",content_seo_2022-01,271,13,16.62,1
+2022-01,content_seo,"Portland, OR",content_seo_2022-01,2552,76,71.38,4
+2022-01,content_seo,"Raleigh, NC",content_seo_2022-01,1109,29,35.36,2
+2022-01,content_seo,"Sacramento, CA",content_seo_2022-01,2396,71,92.9,5
+2022-01,content_seo,"Salt Lake City, UT",content_seo_2022-01,1888,52,65.01,4
+2022-01,content_seo,"San Antonio, TX",content_seo_2022-01,459,23,31.14,2
+2022-01,content_seo,"Seattle, WA",content_seo_2022-01,2601,82,122.13,8
+2022-01,content_seo,"Tampa, FL",content_seo_2022-01,1198,30,53.61,3
+2022-01,organic_search,"Atlanta, GA",organic_search_2022-01,5499,143,85.69,9
+2022-01,organic_search,"Austin, TX",organic_search_2022-01,3245,169,120.33,15
+2022-01,organic_search,"Boise, ID",organic_search_2022-01,318,11,9.89,1
+2022-01,organic_search,"Charlotte, NC",organic_search_2022-01,1480,70,60.27,6
+2022-01,organic_search,"Cleveland, OH",organic_search_2022-01,917,26,29.51,3
+2022-01,organic_search,"Columbus, OH",organic_search_2022-01,1278,38,29.25,3
+2022-01,organic_search,"Dallas, TX",organic_search_2022-01,2490,69,35.35,4
+2022-01,organic_search,"Denver, CO",organic_search_2022-01,1362,79,44.94,6
+2022-01,organic_search,"Indianapolis, IN",organic_search_2022-01,1662,76,31.79,4
+2022-01,organic_search,"Jacksonville, FL",organic_search_2022-01,1555,81,75.28,8
+2022-01,organic_search,"Las Vegas, NV",organic_search_2022-01,5636,159,83.3,10
+2022-01,organic_search,"Memphis, TN",organic_search_2022-01,2959,87,69.02,9
+2022-01,organic_search,"Minneapolis, MN",organic_search_2022-01,567,31,22.01,3
+2022-01,organic_search,"Nashville, TN",organic_search_2022-01,1501,88,58.26,6
+2022-01,organic_search,"Orlando, FL",organic_search_2022-01,3153,157,77.35,8
+2022-01,organic_search,"Phoenix, AZ",organic_search_2022-01,2756,130,50.88,7
+2022-01,organic_search,"Portland, OR",organic_search_2022-01,5716,158,66.6,8
+2022-01,organic_search,"Raleigh, NC",organic_search_2022-01,2448,70,38.35,4
+2022-01,organic_search,"Sacramento, CA",organic_search_2022-01,1928,71,34.74,4
+2022-01,organic_search,"Salt Lake City, UT",organic_search_2022-01,646,25,15.48,2
+2022-01,organic_search,"San Antonio, TX",organic_search_2022-01,3263,86,45.28,6
+2022-01,organic_search,"Seattle, WA",organic_search_2022-01,1585,80,78.63,8
+2022-01,organic_search,"Tampa, FL",organic_search_2022-01,4574,140,67.38,7
+2022-01,paid_search,"Atlanta, GA",paid_search_2022-01,1500,65,245.57,4
+2022-01,paid_search,"Austin, TX",paid_search_2022-01,1909,99,399.44,7
+2022-01,paid_search,"Boise, ID",paid_search_2022-01,322,20,105.2,2

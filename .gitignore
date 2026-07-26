@@ -1,0 +1,10 @@
+# Generated data -- regenerate locally via src/generate_synthetic_data.py etc.
+# See README "How to run this project". Keeping these out of version control
+# is standard practice; data/sample/ ships small previews instead.
+data/raw/*.csv
+data/warehouse.db
+__pycache__/
+*.pyc
+.env
+
+.venv/
