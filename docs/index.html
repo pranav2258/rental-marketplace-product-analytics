@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rental Marketplace Product Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#0f1a2e;
+    --navy-2:#16223b;
+    --canvas:#f6f7fa;
+    --card:#ffffff;
+    --border:#e6e8ee;
+    --text:#111827;
+    --muted:#6b7280;
+    --teal:#0d9488;
+    --teal-light:#ccfbf1;
+    --amber:#f59e0b;
+    --rose:#e11d48;
+    --blue:#2563eb;
+    --violet:#7c3aed;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--sans);background:var(--canvas);color:var(--text);}
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:248px;flex-shrink:0;background:var(--navy);color:#cbd5e1;
+    display:flex;flex-direction:column;padding:24px 16px;position:sticky;top:0;height:100vh;
+  }
+  .brand{padding:0 8px 20px 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:16px;}
+  .brand .name{font-weight:700;font-size:15px;color:#fff;letter-spacing:0.2px;}
+  .brand .tag{font-size:11px;color:#8b93a7;margin-top:4px;font-family:var(--mono);}
+  nav{flex:1;display:flex;flex-direction:column;gap:2px;}
+  nav button{
+    all:unset;cursor:pointer;padding:10px 12px;border-radius:8px;font-size:13.5px;
+    color:#aab2c5;display:flex;align-items:center;gap:10px;transition:background .15s, color .15s;
+  }
+  nav button .num{font-family:var(--mono);font-size:11px;color:#5c6784;width:16px;}
+  nav button:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  nav button.active{background:var(--teal);color:#fff;}
+  nav button.active .num{color:#d1fae5;}
+  .sidebar-footer{font-size:10.5px;color:#5c6784;padding:12px 8px 0 8px;border-top:1px solid rgba(255,255,255,0.08);margin-top:12px;line-height:1.5;}
+
+  /* ---------- Main ---------- */
+  main{flex:1;padding:32px 40px;max-width:1400px;}
+  .page{display:none;}
+  .page.active{display:block;animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+  .page-header{margin-bottom:24px;}
+  .page-header h1{font-size:22px;margin:0 0 4px 0;font-weight:700;}
+  .page-header p{margin:0;color:var(--muted);font-size:13.5px;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+  .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .kpi-card .label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+  .kpi-card .value{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--navy);}
+  .kpi-card .delta{font-size:11.5px;margin-top:6px;font-family:var(--mono);}
+  .delta.up{color:var(--teal);} .delta.down{color:var(--rose);}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  @media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+  .card h3{margin:0 0 4px 0;font-size:14px;font-weight:600;}
+  .card .sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  .chart-wrap{position:relative;height:280px;}
+  .chart-wrap.short{height:220px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:9px 10px;border-bottom:1px solid #f0f1f4;font-family:var(--mono);}
+  td.tag{font-family:var(--sans);}
+  tr:hover td{background:#fafbfc;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-family:var(--sans);font-weight:600;}
+  .pill.green{background:#d1fae5;color:#047857;}
+  .pill.blue{background:#dbeafe;color:#1d4ed8;}
+  .pill.amber{background:#fef3c7;color:#b45309;}
+  .pill.gray{background:#f1f2f5;color:#6b7280;}
+
+  .narrative{background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.6;color:#0f766e;margin-bottom:20px;}
+  .narrative b{color:#065f46;}
+
+  .footnote{font-size:11px;color:var(--muted);margin-top:6px;}
+  .attribution{font-size:10.5px;color:#8b93a7;margin-top:24px;padding-top:14px;border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="name">Rental Marketplace</div>
+      <div class="tag">Product Analytics Platform</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-footer">
+      Synthetic product data + Realtor.com-schema<br>market indicators. Local demo build.
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script id="dashboard-data" type="application/json">{
+"executive_kpis": [
+{
+"month": "2022-01",
+"new_landlords": 572,
+"activated_landlords": 229,
+"activation_rate": 0.4003,
+"paid_landlords": 57,
+"free_to_paid_conversion": 0.2489,
+"applications": 463,
+"leases_signed": 132,
+"lease_conversion_rate": 0.2851,
+"payments_due": 21,
+"payment_success_rate": 0.9048,
+"payment_failure_rate": 0.0952,
+"new_landlords_mom_change": null,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-02",
+"new_landlords": 500,
+"activated_landlords": 216,
+"activation_rate": 0.432,
+"paid_landlords": 62,
+"free_to_paid_conversion": 0.287,
+"applications": 1029,
+"leases_signed": 259,
+"lease_conversion_rate": 0.2517,
+"payments_due": 270,
+"payment_success_rate": 0.8889,
+"payment_failure_rate": 0.037,
+"new_landlords_mom_change": -72.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-03",
+"new_landlords": 597,
+"activated_landlords": 253,
+"activation_rate": 0.4238,
+"paid_landlords": 65,
+"free_to_paid_conversion": 0.2569,
+"applications": 1297,
+"leases_signed": 316,
+"lease_conversion_rate": 0.2436,
+"payments_due": 553,
+"payment_success_rate": 0.9114,
+"payment_failure_rate": 0.0307,
+"new_landlords_mom_change": 97.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-04",
+"new_landlords": 560,
+"activated_landlords": 222,
+"activation_rate": 0.3964,
+"paid_landlords": 51,
+"free_to_paid_conversion": 0.2297,
+"applications": 1110,
+"leases_signed": 296,
+"lease_conversion_rate": 0.2667,
+"payments_due": 857,
+"payment_success_rate": 0.8903,
+"payment_failure_rate": 0.0315,
+"new_landlords_mom_change": -37.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-05",
+"new_landlords": 622,
+"activated_landlords": 247,
+"activation_rate": 0.3971,
+"paid_landlords": 71,
+"free_to_paid_conversion": 0.2874,
+"applications": 1088,
+"leases_signed": 291,
+"lease_conversion_rate": 0.2675,
+"payments_due": 1179,
+"payment_success_rate": 0.8838,
+"payment_failure_rate": 0.0356,
+"new_landlords_mom_change": 62.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-06",
+"new_landlords": 633,
+"activated_landlords": 260,
+"activation_rate": 0.4107,
+"paid_landlords": 59,
+"free_to_paid_conversion": 0.2269,
+"applications": 1308,
+"leases_signed": 368,
+"lease_conversion_rate": 0.2813,
+"payments_due": 1422,
+"payment_success_rate": 0.9023,
+"payment_failure_rate": 0.038,
+"new_landlords_mom_change": 11.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-07",
+"new_landlords": 673,
+"activated_landlords": 271,
+"activation_rate": 0.4027,
+"paid_landlords": 85,
+"free_to_paid_conversion": 0.3137,
+"applications": 1548,
+"leases_signed": 406,
+"lease_conversion_rate": 0.2623,
+"payments_due": 1855,
+"payment_success_rate": 0.9116,
+"payment_failure_rate": 0.0221,
+"new_landlords_mom_change": 40.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-08",
+"new_landlords": 740,
+"activated_landlords": 302,
+"activation_rate": 0.4081,
+"paid_landlords": 81,
+"free_to_paid_conversion": 0.2682,
+"applications": 1525,
+"leases_signed": 419,
+"lease_conversion_rate": 0.2748,
+"payments_due": 2204,
+"payment_success_rate": 0.912,
+"payment_failure_rate": 0.0277,
+"new_landlords_mom_change": 67.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-09",
+"new_landlords": 735,
+"activated_landlords": 313,
+"activation_rate": 0.4259,
+"paid_landlords": 65,
+"free_to_paid_conversion": 0.2077,
+"applications": 1559,
+"leases_signed": 398,
+"lease_conversion_rate": 0.2553,
+"payments_due": 2495,
+"payment_success_rate": 0.899,
+"payment_failure_rate": 0.0313,
+"new_landlords_mom_change": -5.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-10",
+"new_landlords": 727,
+"activated_landlords": 318,
+"activation_rate": 0.4374,
+"paid_landlords": 90,
+"free_to_paid_conversion": 0.283,
+"applications": 1644,
+"leases_signed": 467,
+"lease_conversion_rate": 0.2841,
+"payments_due": 2936,
+"payment_success_rate": 0.9036,
+"payment_failure_rate": 0.0225,
+"new_landlords_mom_change": -8.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-11",
+"new_landlords": 717,
+"activated_landlords": 293,
+"activation_rate": 0.4086,
+"paid_landlords": 90,
+"free_to_paid_conversion": 0.3072,
+"applications": 1513,
+"leases_signed": 392,
+"lease_conversion_rate": 0.2591,
+"payments_due": 3180,
+"payment_success_rate": 0.906,
+"payment_failure_rate": 0.0267,
+"new_landlords_mom_change": -10.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2022-12",
+"new_landlords": 797,
+"activated_landlords": 328,
+"activation_rate": 0.4115,
+"paid_landlords": 92,
+"free_to_paid_conversion": 0.2805,
+"applications": 1583,
+"leases_signed": 431,
+"lease_conversion_rate": 0.2723,
+"payments_due": 3560,
+"payment_success_rate": 0.9025,
+"payment_failure_rate": 0.0275,
+"new_landlords_mom_change": 80.0,
+"new_landlords_yoy_change": null
+},
+{
+"month": "2023-01",
+"new_landlords": 815,
+"activated_landlords": 329,
+"activation_rate": 0.4037,
+"paid_landlords": 95,
+"free_to_paid_conversion": 0.2888,
+"applications": 1605,
+"leases_signed": 406,
+"lease_conversion_rate": 0.253,
+"payments_due": 3789,
+"payment_success_rate": 0.895,
+"payment_failure_rate": 0.0317,
+"new_landlords_mom_change": 18.0,
+"new_landlords_yoy_change": 243.0
+},
+{
+"month": "2023-02",
+"new_landlords": 819,
+"activated_landlords": 340,
+"activation_rate": 0.4151,
+"paid_landlords": 85,
+"free_to_paid_conversion": 0.25,
+"applications": 1611,
+"leases_signed": 429,
+"lease_conversion_rate": 0.2663,
+"payments_due": 3668,
+"payment_success_rate": 0.8975,
+"payment_failure_rate": 0.0314,
+"new_landlords_mom_change": 4.0,
+"new_landlords_yoy_change": 319.0
+},
+{
+"month": "2023-03",
+"new_landlords": 862,
+"activated_landlords": 350,
+"activation_rate": 0.406,
+"paid_landlords": 107,
+"free_to_paid_conversion": 0.3057,
+"applications": 1810,
+"leases_signed": 484,
+"lease_conversion_rate": 0.2674,
+"payments_due": 4382,
+"payment_success_rate": 0.8987,
+"payment_failure_rate": 0.0297,
+"new_landlords_mom_change": 43.0,
+"new_landlords_yoy_change": 265.0
+},
+{
+"month": "2023-04",
+"new_landlords": 839,
+"activated_landlords": 360,
+"activation_rate": 0.4291,
+"paid_landlords": 99,
+"free_to_paid_conversion": 0.275,
+"applications": 1779,
+"leases_signed": 467,
+"lease_conversion_rate": 0.2625,
+"payments_due": 4470,
+"payment_success_rate": 0.8969,
+"payment_failure_rate": 0.0324,
+"new_landlords_mom_change": -23.0,
+"new_landlords_yoy_change": 279.0
+},
+{
+"month": "2023-05",
+"new_landlords": 903,
+"activated_landlords": 355,
+"activation_rate": 0.3931,
+"paid_landlords": 89,
+"free_to_paid_conversion": 0.2507,
+"applications": 1772,
+"leases_signed": 470,
+"lease_conversion_rate": 0.2652,
+"payments_due": 4816,
+"payment_success_rate": 0.8974,
+"payment_failure_rate": 0.0282,
+"new_landlords_mom_change": 64.0,
+"new_landlords_yoy_change": 281.0
+},
+{
+"month": "2023-06",
+"new_landlords": 896,
+"activated_landlords": 364,
+"activation_rate": 0.4063,
+"paid_landlords": 77,
+"free_to_paid_conversion": 0.2115,
+"applications": 1756,
+"leases_signed": 481,
+"lease_conversion_rate": 0.2739,
+"payments_due": 4931,
+"payment_success_rate": 0.9055,
+"payment_failure_rate": 0.0314,
+"new_landlords_mom_change": -7.0,
+"new_landlords_yoy_change": 263.0
+},
+{
+"month": "2023-07",
+"new_landlords": 915,
+"activated_landlords": 387,
+"activation_rate": 0.423,
+"paid_landlords": 105,
+"free_to_paid_conversion": 0.2713,
+"applications": 1924,
+"leases_signed": 536,
+"lease_conversion_rate": 0.2786,
+"payments_due": 5307,
+"payment_success_rate": 0.9035,
+"payment_failure_rate": 0.0303,
+"new_landlords_mom_change": 19.0,
+"new_landlords_yoy_change": 242.0
+},
+{
+"month": "2023-08",
+"new_landlords": 894,
+"activated_landlords": 377,
+"activation_rate": 0.4217,
+"paid_landlords": 105,
+"free_to_paid_conversion": 0.2785,
+"applications": 1912,
+"leases_signed": 472,
+"lease_conversion_rate": 0.2469,
+"payments_due": 5546,
+"payment_success_rate": 0.9016,
+"payment_failure_rate": 0.0308,
+"new_landlords_mom_change": -21.0,
+"new_landlords_yoy_change": 154.0
+},
+{
+"month": "2023-09",
+"new_landlords": 961,
+"activated_landlords": 376,
+"activation_rate": 0.3913,
+"paid_landlords": 89,
+"free_to_paid_conversion": 0.2367,
+"applications": 1801,
+"leases_signed": 480,
+"lease_conversion_rate": 0.2665,
+"payments_due": 5516,
+"payment_success_rate": 0.901,
+"payment_failure_rate": 0.0326,
+"new_landlords_mom_change": 67.0,
+"new_landlords_yoy_change": 226.0
+},
+{
+"month": "2023-10",
+"new_landlords": 1003,
+"activated_landlords": 420,
+"activation_rate": 0.4187,
+"paid_landlords": 120,
+"free_to_paid_conversion": 0.2857,
+"applications": 1950,
+"leases_signed": 497,
+"lease_conversion_rate": 0.2549,
+"payments_due": 5858,
+"payment_success_rate": 0.8984,
+"payment_failure_rate": 0.0316,
+"new_landlords_mom_change": 42.0,
+"new_landlords_yoy_change": 276.0
+},
+{
+"month": "2023-11",
+"new_landlords": 954,
+"activated_landlords": 410,
+"activation_rate": 0.4298,
+"paid_landlords": 108,
+"free_to_paid_conversion": 0.2634,
+"applications": 1935,
+"leases_signed": 546,
+"lease_conversion_rate": 0.2822,
+"payments_due": 5790,
+"payment_success_rate": 0.9005,
+"payment_failure_rate": 0.0323,
+"new_landlords_mom_change": -49.0,
+"new_landlords_yoy_change": 237.0
+},
+{
+"month": "2023-12",
+"new_landlords": 1030,
+"activated_landlords": 425,
+"activation_rate": 0.4126,
+"paid_landlords": 119,
+"free_to_paid_conversion": 0.28,
+"applications": 2023,
+"leases_signed": 562,
+"lease_conversion_rate": 0.2778,
+"payments_due": 6117,
+"payment_success_rate": 0.8957,
+"payment_failure_rate": 0.0286,
+"new_landlords_mom_change": 76.0,
+"new_landlords_yoy_change": 233.0
+},
+{
+"month": "2024-01",
+"new_landlords": 1087,
+"activated_landlords": 438,
+"activation_rate": 0.4029,
+"paid_landlords": 121,
+"free_to_paid_conversion": 0.2763,
+"applications": 2221,
+"leases_signed": 602,
+"lease_conversion_rate": 0.271,
+"payments_due": 6333,
+"payment_success_rate": 0.9029,
+"payment_failure_rate": 0.0335,
+"new_landlords_mom_change": 57.0,
+"new_landlords_yoy_change": 272.0
+},
+{
+"month": "2024-02",
+"new_landlords": 1034,
+"activated_landlords": 439,
+"activation_rate": 0.4246,
+"paid_landlords": 137,
+"free_to_paid_conversion": 0.3121,
+"applications": 2506,
+"leases_signed": 684,
+"lease_conversion_rate": 0.2729,
+"payments_due": 6167,
+"payment_success_rate": 0.8974,
+"payment_failure_rate": 0.0324,
+"new_landlords_mom_change": -53.0,
+"new_landlords_yoy_change": 215.0
+},
+{
+"month": "2024-03",
+"new_landlords": 1137,
+"activated_landlords": 448,
+"activation_rate": 0.394,
+"paid_landlords": 113,
+"free_to_paid_conversion": 0.2522,
+"applications": 2325,
+"leases_signed": 641,
+"lease_conversion_rate": 0.2757,
+"payments_due": 6868,
+"payment_success_rate": 0.9011,
+"payment_failure_rate": 0.028,
+"new_landlords_mom_change": 103.0,
+"new_landlords_yoy_change": 275.0
+},
+{
+"month": "2024-04",
+"new_landlords": 1044,
+"activated_landlords": 404,
+"activation_rate": 0.387,
+"paid_landlords": 127,
+"free_to_paid_conversion": 0.3144,
+"applications": 2408,
+"leases_signed": 627,
+"lease_conversion_rate": 0.2604,
+"payments_due": 6847,
+"payment_success_rate": 0.9004,
+"payment_failure_rate": 0.0334,
+"new_landlords_mom_change": -93.0,
+"new_landlords_yoy_change": 205.0
+},
+{
+"month": "2024-05",
+"new_landlords": 1170,
+"activated_landlords": 442,
+"activation_rate": 0.3778,
+"paid_landlords": 111,
+"free_to_paid_conversion": 0.2511,
+"applications": 2059,
+"leases_signed": 561,
+"lease_conversion_rate": 0.2725,
+"payments_due": 7187,
+"payment_success_rate": 0.8977,
+"payment_failure_rate": 0.0299,
+"new_landlords_mom_change": 126.0,
+"new_landlords_yoy_change": 267.0
+},
+{
+"month": "2024-06",
+"new_landlords": 1217,
+"activated_landlords": 517,
+"activation_rate": 0.4248,
+"paid_landlords": 130,
+"free_to_paid_conversion": 0.2515,
+"applications": 2446,
+"leases_signed": 660,
+"lease_conversion_rate": 0.2698,
+"payments_due": 7049,
+"payment_success_rate": 0.8973,
+"payment_failure_rate": 0.0332,
+"new_landlords_mom_change": 47.0,
+"new_landlords_yoy_change": 321.0
+},
+{
+"month": "2024-07",
+"new_landlords": 1192,
+"activated_landlords": 496,
+"activation_rate": 0.4161,
+"paid_landlords": 138,
+"free_to_paid_conversion": 0.2782,
+"applications": 2802,
+"leases_signed": 719,
+"lease_conversion_rate": 0.2566,
+"payments_due": 7463,
+"payment_success_rate": 0.9015,
+"payment_failure_rate": 0.031,
+"new_landlords_mom_change": -25.0,
+"new_landlords_yoy_change": 277.0
+},
+{
+"month": "2024-08",
+"new_landlords": 1192,
+"activated_landlords": 473,
+"activation_rate": 0.3968,
+"paid_landlords": 143,
+"free_to_paid_conversion": 0.3023,
+"applications": 2524,
+"leases_signed": 678,
+"lease_conversion_rate": 0.2686,
+"payments_due": 7671,
+"payment_success_rate": 0.8995,
+"payment_failure_rate": 0.0309,
+"new_landlords_mom_change": 0.0,
+"new_landlords_yoy_change": 298.0
+},
+{
+"month": "2024-09",
+"new_landlords": 1182,
+"activated_landlords": 470,
+"activation_rate": 0.3976,
+"paid_landlords": 131,
+"free_to_paid_conversion": 0.2787,
+"applications": 2343,
+"leases_signed": 631,
+"lease_conversion_rate": 0.2693,
+"payments_due": 7516,
+"payment_success_rate": 0.8973,
+"payment_failure_rate": 0.0318,
+"new_landlords_mom_change": -10.0,
+"new_landlords_yoy_change": 221.0
+},
+{
+"month": "2024-10",
+"new_landlords": 1234,
+"activated_landlords": 501,
+"activation_rate": 0.406,
+"paid_landlords": 127,
+"free_to_paid_conversion": 0.2535,
+"applications": 2701,
+"leases_signed": 723,
+"lease_conversion_rate": 0.2677,
+"payments_due": 7880,
+"payment_success_rate": 0.9,
+"payment_failure_rate": 0.0298,
+"new_landlords_mom_change": 52.0,
+"new_landlords_yoy_change": 231.0
+},
+{
+"month": "2024-11",
+"new_landlords": 1234,
+"activated_landlords": 499,
+"activation_rate": 0.4044,
+"paid_landlords": 146,
+"free_to_paid_conversion": 0.2926,
+"applications": 2653,
+"leases_signed": 743,
+"lease_conversion_rate": 0.2801,
+"payments_due": 7839,
+"payment_success_rate": 0.9056,
+"payment_failure_rate": 0.0276,
+"new_landlords_mom_change": 0.0,
+"new_landlords_yoy_change": 280.0
+},
+{
+"month": "2024-12",
+"new_landlords": 1337,
+"activated_landlords": 521,
+"activation_rate": 0.3897,
+"paid_landlords": 130,
+"free_to_paid_conversion": 0.2495,
+"applications": 2831,
+"leases_signed": 728,
+"lease_conversion_rate": 0.2572,
+"payments_due": 8271,
+"payment_success_rate": 0.8988,
+"payment_failure_rate": 0.0294,
+"new_landlords_mom_change": 103.0,
+"new_landlords_yoy_change": 307.0
+},
+{
+"month": "2025-01",
+"new_landlords": 1342,
+"activated_landlords": 535,
+"activation_rate": 0.3987,
+"paid_landlords": 155,
+"free_to_paid_conversion": 0.2897,
+"applications": 2599,
+"leases_signed": 694,
+"lease_conversion_rate": 0.267,
+"payments_due": 8399,
+"payment_success_rate": 0.897,
+"payment_failure_rate": 0.0306,
+"new_landlords_mom_change": 5.0,
+"new_landlords_yoy_change": 255.0
+},
+{
+"month": "2025-02",
+"new_landlords": 1191,
+"activated_landlords": 448,
+"activation_rate": 0.3762,
+"paid_landlords": 156,
+"free_to_paid_conversion": 0.3482,
+"applications": 2394,
+"leases_signed": 618,
+"lease_conversion_rate": 0.2581,
+"payments_due": 7635,
+"payment_success_rate": 0.9035,
+"payment_failure_rate": 0.03,
+"new_landlords_mom_change": -151.0,
+"new_landlords_yoy_change": 157.0
+},
+{
+"month": "2025-03",
+"new_landlords": 1368,
+"activated_landlords": 551,
+"activation_rate": 0.4028,
+"paid_landlords": 129,
+"free_to_paid_conversion": 0.2341,
+"applications": 2840,
+"leases_signed": 772,
+"lease_conversion_rate": 0.2718,
+"payments_due": 8675,
+"payment_success_rate": 0.9014,
+"payment_failure_rate": 0.032,
+"new_landlords_mom_change": 177.0,
+"new_landlords_yoy_change": 231.0
+},
+{
+"month": "2025-04",
+"new_landlords": 1357,
+"activated_landlords": 541,
+"activation_rate": 0.3987,
+"paid_landlords": 145,
+"free_to_paid_conversion": 0.268,
+"applications": 2554,
+"leases_signed": 722,
+"lease_conversion_rate": 0.2827,
+"payments_due": 8549,
+"payment_success_rate": 0.8981,
+"payment_failure_rate": 0.0318,
+"new_landlords_mom_change": -11.0,
+"new_landlords_yoy_change": 313.0
+},
+{
+"month": "2025-05",
+"new_landlords": 1408,
+"activated_landlords": 564,
+"activation_rate": 0.4006,
+"paid_landlords": 166,
+"free_to_paid_conversion": 0.2943,
+"applications": 2579,
+"leases_signed": 691,
+"lease_conversion_rate": 0.2679,
+"payments_due": 8945,
+"payment_success_rate": 0.8955,
+"payment_failure_rate": 0.0297,
+"new_landlords_mom_change": 51.0,
+"new_landlords_yoy_change": 238.0
+},
+{
+"month": "2025-06",
+"new_landlords": 1435,
+"activated_landlords": 579,
+"activation_rate": 0.4035,
+"paid_landlords": 147,
+"free_to_paid_conversion": 0.2539,
+"applications": 2782,
+"leases_signed": 734,
+"lease_conversion_rate": 0.2638,
+"payments_due": 8698,
+"payment_success_rate": 0.9023,
+"payment_failure_rate": 0.0306,
+"new_landlords_mom_change": 27.0,
+"new_landlords_yoy_change": 218.0
+},
+{
+"month": "2025-07",
+"new_landlords": 1456,
+"activated_landlords": 584,
+"activation_rate": 0.4011,
+"paid_landlords": 150,
+"free_to_paid_conversion": 0.2568,
+"applications": 3283,
+"leases_signed": 839,
+"lease_conversion_rate": 0.2556,
+"payments_due": 9221,
+"payment_success_rate": 0.9033,
+"payment_failure_rate": 0.0282,
+"new_landlords_mom_change": 21.0,
+"new_landlords_yoy_change": 264.0
+},
+{
+"month": "2025-08",
+"new_landlords": 1530,
+"activated_landlords": 632,
+"activation_rate": 0.4131,
+"paid_landlords": 148,
+"free_to_paid_conversion": 0.2342,
+"applications": 2787,
+"leases_signed": 739,
+"lease_conversion_rate": 0.2652,
+"payments_due": 9327,
+"payment_success_rate": 0.8985,
+"payment_failure_rate": 0.0313,
+"new_landlords_mom_change": 74.0,
+"new_landlords_yoy_change": 338.0
+},
+{
+"month": "2025-09",
+"new_landlords": 1451,
+"activated_landlords": 577,
+"activation_rate": 0.3977,
+"paid_landlords": 165,
+"free_to_paid_conversion": 0.286,
+"applications": 3002,
+"leases_signed": 766,
+"lease_conversion_rate": 0.2552,
+"payments_due": 9118,
+"payment_success_rate": 0.9071,
+"payment_failure_rate": 0.0288,
+"new_landlords_mom_change": -79.0,
+"new_landlords_yoy_change": 269.0
+},
+{
+"month": "2025-10",
+"new_landlords": 1591,
+"activated_landlords": 651,
+"activation_rate": 0.4092,
+"paid_landlords": 173,
+"free_to_paid_conversion": 0.2657,
+"applications": 3263,
+"leases_signed": 830,
+"lease_conversion_rate": 0.2544,
+"payments_due": 9546,
+"payment_success_rate": 0.9063,
+"payment_failure_rate": 0.0267,
+"new_landlords_mom_change": 140.0,
+"new_landlords_yoy_change": 357.0
+},
+{
+"month": "2025-11",
+"new_landlords": 1484,
+"activated_landlords": 588,
+"activation_rate": 0.3962,
+"paid_landlords": 174,
+"free_to_paid_conversion": 0.2959,
+"applications": 2907,
+"leases_signed": 771,
+"lease_conversion_rate": 0.2652,
+"payments_due": 9336,
+"payment_success_rate": 0.9002,
+"payment_failure_rate": 0.0285,
+"new_landlords_mom_change": -107.0,
+"new_landlords_yoy_change": 250.0
+},
+{
+"month": "2025-12",
+"new_landlords": 1563,
+"activated_landlords": 641,
+"activation_rate": 0.4101,
+"paid_landlords": 151,
+"free_to_paid_conversion": 0.2356,
+"applications": 3393,
+"leases_signed": 874,
+"lease_conversion_rate": 0.2576,
+"payments_due": 9790,
+"payment_success_rate": 0.8959,
+"payment_failure_rate": 0.0287,
+"new_landlords_mom_change": 79.0,
+"new_landlords_yoy_change": 226.0
+}
+],
+"exec_summary": {
+"latest_month": "2025-12",
+"new_landlords": 1563,
+"activation_rate": 0.4101,
+"mrr": 284339.0,
+"payment_success_rate": 0.8959,
+"new_landlords_mom_pct": 0.0532
+},
+"acquisition_by_channel": [
+{
+"acquisition_channel": "content_seo",
+"signups": 5936,
+"activation_rate": 0.4039757412,
+"paid_rate": 0.1049528302,
+"cac": 16.4772371968
+},
+{
+"acquisition_channel": "organic_search",
+"signups": 14014,
+"activation_rate": 0.4315684316,
+"paid_rate": 0.1203082632,
+"cac": 8.8013593549
+},
+{
+"acquisition_channel": "paid_search",
+"signups": 9125,
+"activation_rate": 0.3661369863,
+"paid_rate": 0.0872328767,
+"cac": 60.5342136986
+},
+{
+"acquisition_channel": "paid_social",
+"signups": 9785,
+"activation_rate": 0.3002554931,
+"paid_rate": 0.0646908533,
+"cac": 46.2502779765
+},
+{
+"acquisition_channel": "partnerships",
+"signups": 4006,
+"activation_rate": 0.4610584124,
+"paid_rate": 0.133799301,
+"cac": 22.0616525212
+},
+{
+"acquisition_channel": "referral",
+"signups": 7134,
+"activation_rate": 0.5203252033,
+"paid_rate": 0.1689094477,
+"cac": 13.2266526493
+}
+],
+"acquisition_by_device": [
+{
+"signup_device": "desktop",
+"signups": 19941,
+"activation_rate": 0.5112582117
+},
+{
+"signup_device": "mobile",
+"signups": 26096,
+"activation_rate": 0.322693133
+},
+{
+"signup_device": "tablet",
+"signups": 3963,
+"activation_rate": 0.4208932627
+}
+],
+"funnel_overall": {
+"pct_property_added": 0.403919524,
+"pct_listing_published": 0.33702005600000007,
+"pct_tenant_invited": 0.254817462,
+"pct_rent_collection_enabled": 0.049980713999999996,
+"pct_paid_conversion": 0.10299808999999999
+},
+"funnel_by_channel_device": [
+{
+"acquisition_channel": "content_seo",
+"signup_device": "desktop",
+"landlords": 2387.0,
+"publish_abandonment_rate": 0.0717813574
+},
+{
+"acquisition_channel": "content_seo",
+"signup_device": "mobile",
+"landlords": 3044.0,
+"publish_abandonment_rate": 0.3168865966
+},
+{
+"acquisition_channel": "content_seo",
+"signup_device": "tablet",
+"landlords": 505.0,
+"publish_abandonment_rate": 0.1985130693
+},
+{
+"acquisition_channel": "organic_search",
+"signup_device": "desktop",
+"landlords": 5523.0,
+"publish_abandonment_rate": 0.046874923
+},
+{
+"acquisition_channel": "organic_search",
+"signup_device": "mobile",
+"landlords": 7403.0,
+"publish_abandonment_rate": 0.2771239903
+},
+{
+"acquisition_channel": "organic_search",
+"signup_device": "tablet",
+"landlords": 1088.0,
+"publish_abandonment_rate": 0.1799859375
+},
+{
+"acquisition_channel": "paid_search",
+"signup_device": "desktop",
+"landlords": 3651.0,
+"publish_abandonment_rate": 0.1406574637
+},
+{
+"acquisition_channel": "paid_search",
+"signup_device": "mobile",
+"landlords": 4757.0,
+"publish_abandonment_rate": 0.3266771705
+},
+{
+"acquisition_channel": "paid_search",
+"signup_device": "tablet",
+"landlords": 717.0,
+"publish_abandonment_rate": 0.2849354254
+},
+{
+"acquisition_channel": "paid_social",
+"signup_device": "desktop",
+"landlords": 3941.0,
+"publish_abandonment_rate": 0.2209706927
+},
+{
+"acquisition_channel": "paid_social",
+"signup_device": "mobile",
+"landlords": 5071.0,
+"publish_abandonment_rate": 0.4088394597
+},
+{
+"acquisition_channel": "paid_social",
+"signup_device": "tablet",
+"landlords": 773.0,
+"publish_abandonment_rate": 0.3063545925
+},
+{
+"acquisition_channel": "partnerships",
+"signup_device": "desktop",
+"landlords": 1582.0,
+"publish_abandonment_rate": 0.0251006953
+},
+{
+"acquisition_channel": "partnerships",
+"signup_device": "mobile",
+"landlords": 2125.0,
+"publish_abandonment_rate": 0.2364823059
+},
+{
+"acquisition_channel": "partnerships",
+"signup_device": "tablet",
+"landlords": 299.0,
+"publish_abandonment_rate": 0.1296779264
+},
+{
+"acquisition_channel": "referral",
+"signup_device": "desktop",
+"landlords": 2857.0,
+"publish_abandonment_rate": 0.0147126356
+},
+{
+"acquisition_channel": "referral",
+"signup_device": "mobile",
+"landlords": 3696.0,
+"publish_abandonment_rate": 0.1743286797
+},
+{
+"acquisition_channel": "referral",
+"signup_device": "tablet",
+"landlords": 581.0,
+"publish_abandonment_rate": 0.065564716
+}
+],
+"retention_by_feature": [
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 1,
+"retention_rate": 0.937366548
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 2,
+"retention_rate": 0.8797153025
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 3,
+"retention_rate": 0.8327402135
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 4,
+"retention_rate": 0.7964412811
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 5,
+"retention_rate": 0.7644128114
+},
+{
+"first_feature_adopted": "e_signatures",
+"m_offset": 6,
+"retention_rate": 0.7330960854
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 1,
+"retention_rate": 0.9358951175
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 2,
+"retention_rate": 0.8764014467
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 3,
+"retention_rate": 0.8275768535
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 4,
+"retention_rate": 0.7858951175
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 5,
+"retention_rate": 0.7518987342
+},
+{
+"first_feature_adopted": "listing_tools",
+"m_offset": 6,
+"retention_rate": 0.7237793852
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 1,
+"retention_rate": 0.9236641221
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 2,
+"retention_rate": 0.8772753964
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 3,
+"retention_rate": 0.8367586612
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 4,
+"retention_rate": 0.7915443335
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 5,
+"retention_rate": 0.7604227833
+},
+{
+"first_feature_adopted": "maintenance_tracking",
+"m_offset": 6,
+"retention_rate": 0.7269524369
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 1,
+"retention_rate": 0.955534229
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 2,
+"retention_rate": 0.9113883557
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 3,
+"retention_rate": 0.8774792067
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 4,
+"retention_rate": 0.8506078055
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 5,
+"retention_rate": 0.8227767115
+},
+{
+"first_feature_adopted": "online_rent_collection",
+"m_offset": 6,
+"retention_rate": 0.8007037748
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 1,
+"retention_rate": 0.9408026756
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 2,
+"retention_rate": 0.8862876254
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 3,
+"retention_rate": 0.8411371237
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 4,
+"retention_rate": 0.8073578595
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 5,
+"retention_rate": 0.7752508361
+},
+{
+"first_feature_adopted": "tenant_screening",
+"m_offset": 6,
+"retention_rate": 0.747826087
+}
+],
+"retention_by_plan": [
+{
+"plan_type": "free",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"plan_type": "free",
+"m_offset": 1,
+"retention_rate": 0.9242724868
+},
+{
+"plan_type": "free",
+"m_offset": 2,
+"retention_rate": 0.8600529101
+},
+{
+"plan_type": "free",
+"m_offset": 3,
+"retention_rate": 0.8072751323
+},
+{
+"plan_type": "free",
+"m_offset": 4,
+"retention_rate": 0.7627645503
+},
+{
+"plan_type": "free",
+"m_offset": 5,
+"retention_rate": 0.7246693122
+},
+{
+"plan_type": "free",
+"m_offset": 6,
+"retention_rate": 0.6916005291
+},
+{
+"plan_type": "paid",
+"m_offset": 0,
+"retention_rate": 1.0
+},
+{
+"plan_type": "paid",
+"m_offset": 1,
+"retention_rate": 0.9810224632
+},
+{
+"plan_type": "paid",
+"m_offset": 2,
+"retention_rate": 0.9523625097
+},
+{
+"plan_type": "paid",
+"m_offset": 3,
+"retention_rate": 0.9295120062
+},
+{
+"plan_type": "paid",
+"m_offset": 4,
+"retention_rate": 0.9099535244
+},
+{
+"plan_type": "paid",
+"m_offset": 5,
+"retention_rate": 0.8942680093
+},
+{
+"plan_type": "paid",
+"m_offset": 6,
+"retention_rate": 0.8820681642
+}
+],
+"cohort_month6_heatmap": [
+{
+"cohort_month": "2022-01",
+"retention_rate": 0.5152838428
+},
+{
+"cohort_month": "2022-02",
+"retention_rate": 0.4675925926
+},
+{
+"cohort_month": "2022-03",
+"retention_rate": 0.5256916996
+},
+{
+"cohort_month": "2022-04",
+"retention_rate": 0.4504504505
+},
+{
+"cohort_month": "2022-05",
+"retention_rate": 0.5263157895
+},
+{
+"cohort_month": "2022-06",
+"retention_rate": 0.5153846154
+},
+{
+"cohort_month": "2022-07",
+"retention_rate": 0.5387453875
+},
+{
+"cohort_month": "2022-08",
+"retention_rate": 0.4966887417
+},
+{
+"cohort_month": "2022-09",
+"retention_rate": 0.4696485623
+},
+{
+"cohort_month": "2022-10",
+"retention_rate": 0.5408805031
+},
+{
+"cohort_month": "2022-11",
+"retention_rate": 0.5597269625
+},
+{
+"cohort_month": "2022-12",
+"retention_rate": 0.5762195122
+},
+{
+"cohort_month": "2023-01",
+"retention_rate": 0.6048632219
+},
+{
+"cohort_month": "2023-02",
+"retention_rate": 0.5264705882
+},
+{
+"cohort_month": "2023-03",
+"retention_rate": 0.56
+},
+{
+"cohort_month": "2023-04",
+"retention_rate": 0.5722222222
+},
+{
+"cohort_month": "2023-05",
+"retention_rate": 0.5943661972
+},
+{
+"cohort_month": "2023-06",
+"retention_rate": 0.5879120879
+},
+{
+"cohort_month": "2023-07",
+"retention_rate": 0.6046511628
+},
+{
+"cohort_month": "2023-08",
+"retention_rate": 0.5862068966
+},
+{
+"cohort_month": "2023-09",
+"retention_rate": 0.6170212766
+},
+{
+"cohort_month": "2023-10",
+"retention_rate": 0.630952381
+},
+{
+"cohort_month": "2023-11",
+"retention_rate": 0.6585365854
+},
+{
+"cohort_month": "2023-12",
+"retention_rate": 0.6729411765
+},
+{
+"cohort_month": "2024-01",
+"retention_rate": 0.6849315068
+},
+{
+"cohort_month": "2024-02",
+"retention_rate": 0.69476082
+},
+{
+"cohort_month": "2024-03",
+"retention_rate": 0.7321428571
+},
+{
+"cohort_month": "2024-04",
+"retention_rate": 0.7351485149
+},
+{
+"cohort_month": "2024-05",
+"retention_rate": 0.7058823529
+},
+{
+"cohort_month": "2024-06",
+"retention_rate": 0.7272727273
+},
+{
+"cohort_month": "2024-07",
+"retention_rate": 0.7459677419
+},
+{
+"cohort_month": "2024-08",
+"retention_rate": 0.7463002114
+},
+{
+"cohort_month": "2024-09",
+"retention_rate": 0.7957446809
+},
+{
+"cohort_month": "2024-10",
+"retention_rate": 0.7904191617
+},
+{
+"cohort_month": "2024-11",
+"retention_rate": 0.8116232465
+},
+{
+"cohort_month": "2024-12",
+"retention_rate": 0.8272552783
+},
+{
+"cohort_month": "2025-01",
+"retention_rate": 0.846728972
+},
+{
+"cohort_month": "2025-02",
+"retention_rate": 0.8727678571
+},
+{
+"cohort_month": "2025-03",
+"retention_rate": 0.9019963702
+},
+{
+"cohort_month": "2025-04",
+"retention_rate": 0.9057301294
+},
+{
+"cohort_month": "2025-05",
+"retention_rate": 0.9131205674
+},
+{
+"cohort_month": "2025-06",
+"retention_rate": 0.9481865285
+},
+{
+"cohort_month": "2025-07",
+"retention_rate": 0.8955479452
+},
+{
+"cohort_month": "2025-08",
+"retention_rate": 0.9113924051
+},
+{
+"cohort_month": "2025-09",
+"retention_rate": 0.9289428076
+},
+{
+"cohort_month": "2025-10",
+"retention_rate": 0.9539170507
+},
+{
+"cohort_month": "2025-11",
+"retention_rate": 0.9795918367
+},
+{
+"cohort_month": "2025-12",
+"retention_rate": 1.0
+}
+],
+"revenue_monthly": [
+{
+"month": "2022-01",
+"paying_landlords": 44,
+"mrr": 2586,
+"arpu": 58.77,
+"new_mrr": 2586,
+"churned_mrr": 0,
+"mrr_mom_change": null
+},
+{
+"month": "2022-02",
+"paying_landlords": 88,
+"mrr": 5362,
+"arpu": 60.93,
+"new_mrr": 3357,
+"churned_mrr": 274,
+"mrr_mom_change": 2776.0
+},
+{
+"month": "2022-03",
+"paying_landlords": 156,
+"mrr": 9978,
+"arpu": 63.96,
+"new_mrr": 4110,
+"churned_mrr": 577,
+"mrr_mom_change": 4616.0
+},
+{
+"month": "2022-04",
+"paying_landlords": 185,
+"mrr": 11845,
+"arpu": 64.03,
+"new_mrr": 3133,
+"churned_mrr": 490,
+"mrr_mom_change": 1867.0
+},
+{
+"month": "2022-05",
+"paying_landlords": 243,
+"mrr": 16711,
+"arpu": 68.77,
+"new_mrr": 5182,
+"churned_mrr": 1005,
+"mrr_mom_change": 4866.0
+},
+{
+"month": "2022-06",
+"paying_landlords": 279,
+"mrr": 18541,
+"arpu": 66.46,
+"new_mrr": 3569,
+"churned_mrr": 863,
+"mrr_mom_change": 1830.0
+},
+{
+"month": "2022-07",
+"paying_landlords": 352,
+"mrr": 23592,
+"arpu": 67.02,
+"new_mrr": 5283,
+"churned_mrr": 1328,
+"mrr_mom_change": 5051.0
+},
+{
+"month": "2022-08",
+"paying_landlords": 422,
+"mrr": 27888,
+"arpu": 66.09,
+"new_mrr": 5815,
+"churned_mrr": 913,
+"mrr_mom_change": 4296.0
+},
+{
+"month": "2022-09",
+"paying_landlords": 471,
+"mrr": 31179,
+"arpu": 66.2,
+"new_mrr": 4491,
+"churned_mrr": 1578,
+"mrr_mom_change": 3291.0
+},
+{
+"month": "2022-10",
+"paying_landlords": 535,
+"mrr": 35807,
+"arpu": 66.93,
+"new_mrr": 5707,
+"churned_mrr": 1390,
+"mrr_mom_change": 4628.0
+},
+{
+"month": "2022-11",
+"paying_landlords": 602,
+"mrr": 39578,
+"arpu": 65.74,
+"new_mrr": 6162,
+"churned_mrr": 1738,
+"mrr_mom_change": 3771.0
+},
+{
+"month": "2022-12",
+"paying_landlords": 683,
+"mrr": 44788,
+"arpu": 65.58,
+"new_mrr": 5374,
+"churned_mrr": 1539,
+"mrr_mom_change": 5210.0
+},
+{
+"month": "2023-01",
+"paying_landlords": 746,
+"mrr": 47744,
+"arpu": 64.0,
+"new_mrr": 5367,
+"churned_mrr": 1780,
+"mrr_mom_change": 2956.0
+},
+{
+"month": "2023-02",
+"paying_landlords": 743,
+"mrr": 47967,
+"arpu": 64.56,
+"new_mrr": 5697,
+"churned_mrr": 1769,
+"mrr_mom_change": 223.0
+},
+{
+"month": "2023-03",
+"paying_landlords": 868,
+"mrr": 59918,
+"arpu": 69.03,
+"new_mrr": 6806,
+"churned_mrr": 2137,
+"mrr_mom_change": 11951.0
+},
+{
+"month": "2023-04",
+"paying_landlords": 921,
+"mrr": 60699,
+"arpu": 65.91,
+"new_mrr": 6466,
+"churned_mrr": 1871,
+"mrr_mom_change": 781.0
+},
+{
+"month": "2023-05",
+"paying_landlords": 1006,
+"mrr": 66119,
+"arpu": 65.72,
+"new_mrr": 6510,
+"churned_mrr": 2601,
+"mrr_mom_change": 5420.0
+},
+{
+"month": "2023-06",
+"paying_landlords": 1045,
+"mrr": 67265,
+"arpu": 64.37,
+"new_mrr": 5106,
+"churned_mrr": 1619,
+"mrr_mom_change": 1146.0
+},
+{
+"month": "2023-07",
+"paying_landlords": 1128,
+"mrr": 72506,
+"arpu": 64.28,
+"new_mrr": 5310,
+"churned_mrr": 1655,
+"mrr_mom_change": 5241.0
+},
+{
+"month": "2023-08",
+"paying_landlords": 1217,
+"mrr": 77383,
+"arpu": 63.59,
+"new_mrr": 7127,
+"churned_mrr": 1702,
+"mrr_mom_change": 4877.0
+},
+{
+"month": "2023-09",
+"paying_landlords": 1252,
+"mrr": 79958,
+"arpu": 63.86,
+"new_mrr": 5664,
+"churned_mrr": 1238,
+"mrr_mom_change": 2575.0
+},
+{
+"month": "2023-10",
+"paying_landlords": 1358,
+"mrr": 87088,
+"arpu": 64.13,
+"new_mrr": 5756,
+"churned_mrr": 1893,
+"mrr_mom_change": 7130.0
+},
+{
+"month": "2023-11",
+"paying_landlords": 1427,
+"mrr": 89993,
+"arpu": 63.06,
+"new_mrr": 7659,
+"churned_mrr": 2072,
+"mrr_mom_change": 2905.0
+},
+{
+"month": "2023-12",
+"paying_landlords": 1522,
+"mrr": 97253,
+"arpu": 63.9,
+"new_mrr": 7064,
+"churned_mrr": 2644,
+"mrr_mom_change": 7260.0
+},
+{
+"month": "2024-01",
+"paying_landlords": 1610,
+"mrr": 102070,
+"arpu": 63.4,
+"new_mrr": 8408,
+"churned_mrr": 2333,
+"mrr_mom_change": 4817.0
+},
+{
+"month": "2024-02",
+"paying_landlords": 1633,
+"mrr": 103457,
+"arpu": 63.35,
+"new_mrr": 9169,
+"churned_mrr": 1951,
+"mrr_mom_change": 1387.0
+},
+{
+"month": "2024-03",
+"paying_landlords": 1810,
+"mrr": 119689,
+"arpu": 66.13,
+"new_mrr": 7509,
+"churned_mrr": 2108,
+"mrr_mom_change": 16232.0
+},
+{
+"month": "2024-04",
+"paying_landlords": 1869,
+"mrr": 118511,
+"arpu": 63.41,
+"new_mrr": 8206,
+"churned_mrr": 1834,
+"mrr_mom_change": -1178.0
+},
+{
+"month": "2024-05",
+"paying_landlords": 1998,
+"mrr": 128551,
+"arpu": 64.34,
+"new_mrr": 7502,
+"churned_mrr": 1569,
+"mrr_mom_change": 10040.0
+},
+{
+"month": "2024-06",
+"paying_landlords": 2057,
+"mrr": 129723,
+"arpu": 63.06,
+"new_mrr": 6843,
+"churned_mrr": 1282,
+"mrr_mom_change": 1172.0
+},
+{
+"month": "2024-07",
+"paying_landlords": 2215,
+"mrr": 141470,
+"arpu": 63.87,
+"new_mrr": 8562,
+"churned_mrr": 963,
+"mrr_mom_change": 11747.0
+},
+{
+"month": "2024-08",
+"paying_landlords": 2325,
+"mrr": 147045,
+"arpu": 63.25,
+"new_mrr": 9515,
+"churned_mrr": 2495,
+"mrr_mom_change": 5575.0
+},
+{
+"month": "2024-09",
+"paying_landlords": 2377,
+"mrr": 150663,
+"arpu": 63.38,
+"new_mrr": 8595,
+"churned_mrr": 1681,
+"mrr_mom_change": 3618.0
+},
+{
+"month": "2024-10",
+"paying_landlords": 2539,
+"mrr": 163968,
+"arpu": 64.58,
+"new_mrr": 9004,
+"churned_mrr": 1299,
+"mrr_mom_change": 13305.0
+},
+{
+"month": "2024-11",
+"paying_landlords": 2609,
+"mrr": 165741,
+"arpu": 63.53,
+"new_mrr": 9096,
+"churned_mrr": 2088,
+"mrr_mom_change": 1773.0
+},
+{
+"month": "2024-12",
+"paying_landlords": 2767,
+"mrr": 178376,
+"arpu": 64.47,
+"new_mrr": 8744,
+"churned_mrr": 1730,
+"mrr_mom_change": 12635.0
+},
+{
+"month": "2025-01",
+"paying_landlords": 2882,
+"mrr": 182128,
+"arpu": 63.2,
+"new_mrr": 8389,
+"churned_mrr": 1416,
+"mrr_mom_change": 3752.0
+},
+{
+"month": "2025-02",
+"paying_landlords": 2790,
+"mrr": 176580,
+"arpu": 63.29,
+"new_mrr": 9783,
+"churned_mrr": 706,
+"mrr_mom_change": -5548.0
+},
+{
+"month": "2025-03",
+"paying_landlords": 3127,
+"mrr": 211461,
+"arpu": 67.62,
+"new_mrr": 7374,
+"churned_mrr": 1631,
+"mrr_mom_change": 34881.0
+},
+{
+"month": "2025-04",
+"paying_landlords": 3203,
+"mrr": 202287,
+"arpu": 63.16,
+"new_mrr": 9773,
+"churned_mrr": 979,
+"mrr_mom_change": -9174.0
+},
+{
+"month": "2025-05",
+"paying_landlords": 3395,
+"mrr": 218159,
+"arpu": 64.26,
+"new_mrr": 10046,
+"churned_mrr": 867,
+"mrr_mom_change": 15872.0
+},
+{
+"month": "2025-06",
+"paying_landlords": 3473,
+"mrr": 219387,
+"arpu": 63.17,
+"new_mrr": 9278,
+"churned_mrr": 610,
+"mrr_mom_change": 1228.0
+},
+{
+"month": "2025-07",
+"paying_landlords": 3668,
+"mrr": 235744,
+"arpu": 64.27,
+"new_mrr": 9589,
+"churned_mrr": 627,
+"mrr_mom_change": 16357.0
+},
+{
+"month": "2025-08",
+"paying_landlords": 3801,
+"mrr": 240749,
+"arpu": 63.34,
+"new_mrr": 9360,
+"churned_mrr": 1174,
+"mrr_mom_change": 5005.0
+},
+{
+"month": "2025-09",
+"paying_landlords": 3885,
+"mrr": 246685,
+"arpu": 63.5,
+"new_mrr": 10976,
+"churned_mrr": 1125,
+"mrr_mom_change": 5936.0
+},
+{
+"month": "2025-10",
+"paying_landlords": 4107,
+"mrr": 264716,
+"arpu": 64.45,
+"new_mrr": 11039,
+"churned_mrr": 590,
+"mrr_mom_change": 18031.0
+},
+{
+"month": "2025-11",
+"paying_landlords": 4196,
+"mrr": 266864,
+"arpu": 63.6,
+"new_mrr": 11270,
+"churned_mrr": 759,
+"mrr_mom_change": 2148.0
+},
+{
+"month": "2025-12",
+"paying_landlords": 4429,
+"mrr": 284339,
+"arpu": 64.2,
+"new_mrr": 9270,
+"churned_mrr": 4121,
+"mrr_mom_change": 17475.0
+}
+],
+"revenue_forecast": [
+{
+"month": "2026-01",
+"forecast_mrr": 288937.0
+},
+{
+"month": "2026-02",
+"forecast_mrr": 298294.0
+},
+{
+"month": "2026-03",
+"forecast_mrr": 307650.0
+},
+{
+"month": "2026-04",
+"forecast_mrr": 317007.0
+},
+{
+"month": "2026-05",
+"forecast_mrr": 326364.0
+},
+{
+"month": "2026-06",
+"forecast_mrr": 335721.0
+}
+],
+"market_opportunity": [
+{
+"metro_id": "M003",
+"metro_name": "Phoenix, AZ",
+"demand_score": 87.3,
+"supply_score": 56.3,
+"hotness_score": 78.8,
+"median_days_on_market": 35.8,
+"active_listing_count": 4868,
+"new_listing_count": 1495,
+"platform_landlords": 2517,
+"activation_rate": 0.4128,
+"paid_conversion_rate": 0.1108,
+"demand_norm": 1.0,
+"low_penetration_norm": 0.665,
+"opportunity_score": 0.678,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M015",
+"metro_name": "Orlando, FL",
+"demand_score": 83.3,
+"supply_score": 48.2,
+"hotness_score": 77.8,
+"median_days_on_market": 33.2,
+"active_listing_count": 5645,
+"new_listing_count": 1788,
+"platform_landlords": 2656,
+"activation_rate": 0.4202,
+"paid_conversion_rate": 0.1148,
+"demand_norm": 0.8985,
+"low_penetration_norm": 0.7129,
+"opportunity_score": 0.6535,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M001",
+"metro_name": "Austin, TX",
+"demand_score": 84.5,
+"supply_score": 50.5,
+"hotness_score": 77.9,
+"median_days_on_market": 34.5,
+"active_listing_count": 5565,
+"new_listing_count": 1065,
+"platform_landlords": 3038,
+"activation_rate": 0.4253,
+"paid_conversion_rate": 0.1119,
+"demand_norm": 0.9289,
+"low_penetration_norm": 0.6353,
+"opportunity_score": 0.6427,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M014",
+"metro_name": "Atlanta, GA",
+"demand_score": 83.1,
+"supply_score": 60.5,
+"hotness_score": 76.2,
+"median_days_on_market": 37.0,
+"active_listing_count": 5007,
+"new_listing_count": 1241,
+"platform_landlords": 2524,
+"activation_rate": 0.4013,
+"paid_conversion_rate": 0.107,
+"demand_norm": 0.8934,
+"low_penetration_norm": 0.6783,
+"opportunity_score": 0.6371,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M020",
+"metro_name": "Boise, ID",
+"demand_score": 78.1,
+"supply_score": 65.2,
+"hotness_score": 73.1,
+"median_days_on_market": 38.2,
+"active_listing_count": 4722,
+"new_listing_count": 1205,
+"platform_landlords": 1743,
+"activation_rate": 0.397,
+"paid_conversion_rate": 0.1147,
+"demand_norm": 0.7665,
+"low_penetration_norm": 0.8173,
+"opportunity_score": 0.6286,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M005",
+"metro_name": "Charlotte, NC",
+"demand_score": 84.3,
+"supply_score": 52.4,
+"hotness_score": 77.3,
+"median_days_on_market": 35.8,
+"active_listing_count": 3352,
+"new_listing_count": 696,
+"platform_landlords": 2107,
+"activation_rate": 0.3916,
+"paid_conversion_rate": 0.1101,
+"demand_norm": 0.9239,
+"low_penetration_norm": 0.5502,
+"opportunity_score": 0.6098,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M016",
+"metro_name": "San Antonio, TX",
+"demand_score": 72.0,
+"supply_score": 59.6,
+"hotness_score": 66.2,
+"median_days_on_market": 47.6,
+"active_listing_count": 6086,
+"new_listing_count": 1582,
+"platform_landlords": 1533,
+"activation_rate": 0.3796,
+"paid_conversion_rate": 0.1024,
+"demand_norm": 0.6117,
+"low_penetration_norm": 0.938,
+"opportunity_score": 0.5984,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M004",
+"metro_name": "Tampa, FL",
+"demand_score": 82.3,
+"supply_score": 42.3,
+"hotness_score": 75.8,
+"median_days_on_market": 36.8,
+"active_listing_count": 3959,
+"new_listing_count": 1164,
+"platform_landlords": 2753,
+"activation_rate": 0.4384,
+"paid_conversion_rate": 0.1166,
+"demand_norm": 0.8731,
+"low_penetration_norm": 0.4814,
+"opportunity_score": 0.5769,
+"market_classification": "high_demand_high_penetration"
+},
+{
+"metro_id": "M007",
+"metro_name": "Raleigh, NC",
+"demand_score": 73.6,
+"supply_score": 57.2,
+"hotness_score": 70.9,
+"median_days_on_market": 38.3,
+"active_listing_count": 4612,
+"new_listing_count": 971,
+"platform_landlords": 2055,
+"activation_rate": 0.4088,
+"paid_conversion_rate": 0.1148,
+"demand_norm": 0.6523,
+"low_penetration_norm": 0.7386,
+"opportunity_score": 0.561,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M012",
+"metro_name": "Seattle, WA",
+"demand_score": 76.9,
+"supply_score": 48.7,
+"hotness_score": 69.5,
+"median_days_on_market": 45.5,
+"active_listing_count": 5388,
+"new_listing_count": 1278,
+"platform_landlords": 3253,
+"activation_rate": 0.4534,
+"paid_conversion_rate": 0.1236,
+"demand_norm": 0.736,
+"low_penetration_norm": 0.5757,
+"opportunity_score": 0.5537,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M011",
+"metro_name": "Denver, CO",
+"demand_score": 75.5,
+"supply_score": 57.9,
+"hotness_score": 71.5,
+"median_days_on_market": 39.0,
+"active_listing_count": 3731,
+"new_listing_count": 785,
+"platform_landlords": 2353,
+"activation_rate": 0.4122,
+"paid_conversion_rate": 0.1079,
+"demand_norm": 0.7005,
+"low_penetration_norm": 0.548,
+"opportunity_score": 0.5226,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M025",
+"metro_name": "Jacksonville, FL",
+"demand_score": 83.9,
+"supply_score": 53.1,
+"hotness_score": 74.5,
+"median_days_on_market": 41.9,
+"active_listing_count": 2233,
+"new_listing_count": 649,
+"platform_landlords": 2155,
+"activation_rate": 0.4186,
+"paid_conversion_rate": 0.1114,
+"demand_norm": 0.9137,
+"low_penetration_norm": 0.2037,
+"opportunity_score": 0.5061,
+"market_classification": "high_demand_high_penetration"
+},
+{
+"metro_id": "M006",
+"metro_name": "Nashville, TN",
+"demand_score": 79.4,
+"supply_score": 58.7,
+"hotness_score": 73.4,
+"median_days_on_market": 39.2,
+"active_listing_count": 3084,
+"new_listing_count": 744,
+"platform_landlords": 2566,
+"activation_rate": 0.4069,
+"paid_conversion_rate": 0.1087,
+"demand_norm": 0.7995,
+"low_penetration_norm": 0.3406,
+"opportunity_score": 0.4993,
+"market_classification": "high_demand_high_penetration"
+},
+{
+"metro_id": "M017",
+"metro_name": "Sacramento, CA",
+"demand_score": 73.6,
+"supply_score": 48.9,
+"hotness_score": 68.1,
+"median_days_on_market": 45.0,
+"active_listing_count": 4046,
+"new_listing_count": 1178,
+"platform_landlords": 2730,
+"activation_rate": 0.4403,
+"paid_conversion_rate": 0.1125,
+"demand_norm": 0.6523,
+"low_penetration_norm": 0.5026,
+"opportunity_score": 0.4946,
+"market_classification": "high_demand_low_penetration"
+},
+{
+"metro_id": "M013",
+"metro_name": "Portland, OR",
+"demand_score": 63.0,
+"supply_score": 58.6,
+"hotness_score": 61.5,
+"median_days_on_market": 47.8,
+"active_listing_count": 4380,
+"new_listing_count": 872,
+"platform_landlords": 1973,
+"activation_rate": 0.3837,
+"paid_conversion_rate": 0.1054,
+"demand_norm": 0.3832,
+"low_penetration_norm": 0.7336,
+"opportunity_score": 0.4467,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M018",
+"metro_name": "Las Vegas, NV",
+"demand_score": 75.0,
+"supply_score": 52.2,
+"hotness_score": 70.7,
+"median_days_on_market": 40.2,
+"active_listing_count": 2519,
+"new_listing_count": 542,
+"platform_landlords": 2322,
+"activation_rate": 0.4177,
+"paid_conversion_rate": 0.1068,
+"demand_norm": 0.6878,
+"low_penetration_norm": 0.2482,
+"opportunity_score": 0.4283,
+"market_classification": "high_demand_high_penetration"
+},
+{
+"metro_id": "M010",
+"metro_name": "Kansas City, MO",
+"demand_score": 61.9,
+"supply_score": 69.5,
+"hotness_score": 60.4,
+"median_days_on_market": 49.3,
+"active_listing_count": 2247,
+"new_listing_count": 470,
+"platform_landlords": 1103,
+"activation_rate": 0.3799,
+"paid_conversion_rate": 0.0961,
+"demand_norm": 0.3553,
+"low_penetration_norm": 0.692,
+"opportunity_score": 0.4211,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M009",
+"metro_name": "Indianapolis, IN",
+"demand_score": 56.8,
+"supply_score": 65.7,
+"hotness_score": 58.8,
+"median_days_on_market": 47.0,
+"active_listing_count": 3113,
+"new_listing_count": 806,
+"platform_landlords": 1148,
+"activation_rate": 0.3397,
+"paid_conversion_rate": 0.0976,
+"demand_norm": 0.2259,
+"low_penetration_norm": 0.8177,
+"opportunity_score": 0.4013,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M024",
+"metro_name": "Memphis, TN",
+"demand_score": 50.9,
+"supply_score": 60.9,
+"hotness_score": 52.5,
+"median_days_on_market": 55.0,
+"active_listing_count": 4955,
+"new_listing_count": 1543,
+"platform_landlords": 950,
+"activation_rate": 0.3284,
+"paid_conversion_rate": 0.0905,
+"demand_norm": 0.0761,
+"low_penetration_norm": 1.0,
+"opportunity_score": 0.3933,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M002",
+"metro_name": "Dallas, TX",
+"demand_score": 69.1,
+"supply_score": 55.1,
+"hotness_score": 67.6,
+"median_days_on_market": 40.6,
+"active_listing_count": 2572,
+"new_listing_count": 700,
+"platform_landlords": 2269,
+"activation_rate": 0.4068,
+"paid_conversion_rate": 0.1124,
+"demand_norm": 0.5381,
+"low_penetration_norm": 0.289,
+"opportunity_score": 0.3798,
+"market_classification": "high_demand_high_penetration"
+},
+{
+"metro_id": "M021",
+"metro_name": "Minneapolis, MN",
+"demand_score": 63.7,
+"supply_score": 70.6,
+"hotness_score": 60.4,
+"median_days_on_market": 51.5,
+"active_listing_count": 1522,
+"new_listing_count": 416,
+"platform_landlords": 1071,
+"activation_rate": 0.3735,
+"paid_conversion_rate": 0.1008,
+"demand_norm": 0.401,
+"low_penetration_norm": 0.4728,
+"opportunity_score": 0.3734,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M022",
+"metro_name": "Pittsburgh, PA",
+"demand_score": 48.9,
+"supply_score": 71.0,
+"hotness_score": 53.2,
+"median_days_on_market": 51.0,
+"active_listing_count": 4303,
+"new_listing_count": 937,
+"platform_landlords": 825,
+"activation_rate": 0.3297,
+"paid_conversion_rate": 0.0897,
+"demand_norm": 0.0254,
+"low_penetration_norm": 1.0,
+"opportunity_score": 0.3731,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M008",
+"metro_name": "Columbus, OH",
+"demand_score": 61.9,
+"supply_score": 62.5,
+"hotness_score": 61.3,
+"median_days_on_market": 47.1,
+"active_listing_count": 2416,
+"new_listing_count": 723,
+"platform_landlords": 1640,
+"activation_rate": 0.3774,
+"paid_conversion_rate": 0.1079,
+"demand_norm": 0.3553,
+"low_penetration_norm": 0.4984,
+"opportunity_score": 0.3645,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M023",
+"metro_name": "Cleveland, OH",
+"demand_score": 47.9,
+"supply_score": 71.3,
+"hotness_score": 51.5,
+"median_days_on_market": 54.0,
+"active_listing_count": 2839,
+"new_listing_count": 882,
+"platform_landlords": 688,
+"activation_rate": 0.3067,
+"paid_conversion_rate": 0.0887,
+"demand_norm": 0.0,
+"low_penetration_norm": 0.9479,
+"opportunity_score": 0.3437,
+"market_classification": "low_demand_high_performance"
+},
+{
+"metro_id": "M019",
+"metro_name": "Salt Lake City, UT",
+"demand_score": 73.4,
+"supply_score": 55.1,
+"hotness_score": 69.1,
+"median_days_on_market": 42.3,
+"active_listing_count": 1744,
+"new_listing_count": 413,
+"platform_landlords": 2028,
+"activation_rate": 0.4004,
+"paid_conversion_rate": 0.1095,
+"demand_norm": 0.6472,
+"low_penetration_norm": 0.0,
+"opportunity_score": 0.3354,
+"market_classification": "high_demand_high_penetration"
+}
+],
+"experiment_summary": [
+{
+"variant": "control",
+"n": 2046,
+"activation_rate": 0.3470185728,
+"paid_conv_rate": 0.0522971652
+},
+{
+"variant": "treatment",
+"n": 2027,
+"activation_rate": 0.4099654662,
+"paid_conv_rate": 0.0883078441
+}
+],
+"experiment_stats": {
+"abs_uplift": 0.0629,
+"rel_uplift": 0.1814,
+"ci_low": 0.0332,
+"ci_high": 0.0927,
+"recommendation": "SHIP"
+},
+"data_quality": {
+"tables": [
+{
+"table": "stg_landlords",
+"row_count": 50000
+},
+{
+"table": "stg_properties",
+"row_count": 78279
+},
+{
+"table": "stg_applications",
+"row_count": 101747
+},
+{
+"table": "stg_payments",
+"row_count": 275052
+},
+{
+"table": "stg_events",
+"row_count": 228531
+}
+],
+"pk_violations": 0,
+"event_sequence_violations": 0,
+"revenue_reconciliation_diff": 16,
+"last_refresh": "2026-07-26 06:31",
+"pipeline_status": "PASS"
+}
+}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('dashboard-data').textContent);
+const PAGES = [
+  {id:'exec', label:'Executive Overview'},
+  {id:'acq', label:'Acquisition & Activation'},
+  {id:'engagement', label:'Engagement & Retention'},
+  {id:'revenue', label:'Revenue & Forecasting'},
+  {id:'market', label:'Market Opportunity'},
+  {id:'experiment', label:'Experimentation'},
+  {id:'quality', label:'Data Quality'},
+];
+
+const navEl = document.getElementById('nav');
+const mainEl = document.getElementById('main');
+PAGES.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.innerHTML = `<span class="num">0${i+1}</span><span>${p.label}</span>`;
+  btn.dataset.id = p.id;
+  btn.onclick = () => showPage(p.id);
+  navEl.appendChild(btn);
+});
+
+function fmtPct(x, d=1){ return x==null ? '—' : (x*100).toFixed(d)+'%'; }
+function fmtNum(x){ return x==null ? '—' : Math.round(x).toLocaleString(); }
+function fmtMoney(x){ return x==null ? '—' : '$'+Math.round(x).toLocaleString(); }
+
+const CHART_COLORS = ['#0d9488','#2563eb','#f59e0b','#e11d48','#7c3aed','#64748b'];
+
+let renderedCharts = {};
+function destroyChart(id){ if(renderedCharts[id]){ renderedCharts[id].destroy(); delete renderedCharts[id]; } }
+
+function buildExec(){
+  const s = DATA.exec_summary;
+  const kpis = DATA.executive_kpis;
+  mainEl.innerHTML = `
+    <div class="page-header">
+      <h1>Executive Overview</h1>
+      <p>Platform health as of ${s.latest_month} — active landlords, activation, revenue, and payment reliability at a glance.</p>
+    </div>
+    <div class="narrative">
+      <b>Latest month:</b> ${fmtNum(s.new_landlords)} new landlords signed up
+      (${s.new_landlords_mom_pct!=null ? (s.new_landlords_mom_pct>=0?'+':'')+fmtPct(s.new_landlords_mom_pct) : '—'} vs prior month),
+      with a ${fmtPct(s.activation_rate)} 7-day activation rate. MRR stands at ${fmtMoney(s.mrr)}
+      with a ${fmtPct(s.payment_success_rate)} on-time payment rate.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">New Landlords</div><div class="value">${fmtNum(s.new_landlords)}</div>
+        <div class="delta ${s.new_landlords_mom_pct>=0?'up':'down'}">${s.new_landlords_mom_pct!=null?(s.new_landlords_mom_pct>=0?'▲ ':'▼ ')+fmtPct(Math.abs(s.new_landlords_mom_pct)):'—'} MoM</div></div>
+      <div class="kpi-card"><div class="label">7-Day Activation</div><div class="value">${fmtPct(s.activation_rate)}</div></div>
+      <div class="kpi-card"><div class="label">MRR</div><div class="value">${fmtMoney(s.mrr)}</div></div>
+      <div class="kpi-card"><div class="label">Payment Success</div><div class="value">${fmtPct(s.payment_success_rate)}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>New Landlords by Month</h3><div class="sub">Signups + activated, last 24 months</div>
+        <div class="chart-wrap"><canvas id="c1"></canvas></div></div>
+      <div class="card"><h3>Activation & Free-to-Paid Conversion</h3><div class="sub">Monthly rate trends</div>
+        <div class="chart-wrap"><canvas id="c2"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Applications & Lease Conversion</h3><div class="sub">Monthly application volume vs. signed-lease rate</div>
+      <div class="chart-wrap short"><canvas id="c3"></canvas></div></div>
+  `;
+  const last24 = kpis.slice(-24);
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    type:'bar',
+    data:{labels:last24.map(r=>r.month), datasets:[
+      {label:'New landlords', data:last24.map(r=>r.new_landlords), backgroundColor:'#93c5fd'},
+      {label:'Activated', data:last24.map(r=>r.activated_landlords), backgroundColor:'#0d9488'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{x:{ticks:{font:{size:9}}}}}
+  });
+  renderedCharts.c2 = new Chart(document.getElementById('c2'), {
+    type:'line',
+    data:{labels:last24.map(r=>r.month), datasets:[
+      {label:'Activation rate', data:last24.map(r=>r.activation_rate), borderColor:'#0d9488', tension:.3, pointRadius:0},
+      {label:'Free-to-paid conversion', data:last24.map(r=>r.free_to_paid_conversion), borderColor:'#f59e0b', tension:.3, pointRadius:0},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}, x:{ticks:{font:{size:9}}}}}
+  });
+  renderedCharts.c3 = new Chart(document.getElementById('c3'), {
+    type:'bar',
+    data:{labels:last24.map(r=>r.month), datasets:[
+      {label:'Applications', data:last24.map(r=>r.applications), backgroundColor:'#c7d2fe', yAxisID:'y'},
+      {label:'Lease conversion rate', data:last24.map(r=>r.lease_conversion_rate), type:'line', borderColor:'#e11d48', yAxisID:'y1', pointRadius:0, tension:.3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>(v*100).toFixed(0)+'%'}}, x:{ticks:{font:{size:9}}}}}
+  });
+}
+
+function buildAcq(){
+  const byChannel = DATA.acquisition_by_channel.sort((a,b)=>b.signups-a.signups);
+  const byDevice = DATA.acquisition_by_device;
+  const f = DATA.funnel_overall;
+  const funnelLabels = ['Account Created','Property Added','Listing Published','Tenant Invited','Rent Collection','Paid Subscription'];
+  const funnelVals = [1, f.pct_property_added, f.pct_listing_published, f.pct_tenant_invited, f.pct_rent_collection_enabled, f.pct_paid_conversion];
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Acquisition & Activation</h1>
+      <p>Where landlords come from, what they cost to acquire, and how far they get through onboarding.</p></div>
+    <div class="grid-2">
+      <div class="card"><h3>Signups & CAC by Channel</h3><div class="sub">Bar = signups (left axis), line = CAC $ (right axis)</div>
+        <div class="chart-wrap"><canvas id="c1"></canvas></div></div>
+      <div class="card"><h3>Onboarding Funnel</h3><div class="sub">% of activated landlords reaching each step</div>
+        <div class="chart-wrap"><canvas id="c2"></canvas></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>Activation Rate by Channel</h3>
+        <div class="chart-wrap short"><canvas id="c3"></canvas></div></div>
+      <div class="card"><h3>Mobile vs. Desktop Activation</h3>
+        <div class="chart-wrap short"><canvas id="c4"></canvas></div></div>
+    </div>
+    <div class="card"><h3>Worst Listing-Publish Abandonment (channel × device)</h3>
+      <div class="sub">Highest-volume segments where landlords add a property but never publish it</div>
+      <table><thead><tr><th>Channel</th><th>Device</th><th>Landlords</th><th>Publish abandonment</th></tr></thead>
+      <tbody id="abandon-table"></tbody></table>
+    </div>
+  `;
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    data:{labels:byChannel.map(r=>r.acquisition_channel), datasets:[
+      {type:'bar', label:'Signups', data:byChannel.map(r=>r.signups), backgroundColor:'#93c5fd', yAxisID:'y'},
+      {type:'line', label:'CAC ($)', data:byChannel.map(r=>r.cac), borderColor:'#e11d48', yAxisID:'y1', pointRadius:3, tension:.2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
+      scales:{y:{position:'left'}, y1:{position:'right', grid:{drawOnChartArea:false}}, x:{ticks:{font:{size:9}}}}}
+  });
+  renderedCharts.c2 = new Chart(document.getElementById('c2'), {
+    type:'bar',
+    data:{labels:funnelLabels, datasets:[{label:'% reaching step', data:funnelVals, backgroundColor:'#0d9488'}]},
+    options:{indexAxis:'y', responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}, max:1}}}
+  });
+  renderedCharts.c3 = new Chart(document.getElementById('c3'), {
+    type:'bar',
+    data:{labels:byChannel.map(r=>r.acquisition_channel), datasets:[{label:'Activation rate', data:byChannel.map(r=>r.activation_rate), backgroundColor:CHART_COLORS}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}, x:{ticks:{font:{size:9}}}}}
+  });
+  renderedCharts.c4 = new Chart(document.getElementById('c4'), {
+    type:'bar',
+    data:{labels:byDevice.map(r=>r.signup_device), datasets:[{label:'Activation rate', data:byDevice.map(r=>r.activation_rate), backgroundColor:['#0d9488','#2563eb','#f59e0b']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}}}
+  });
+  const tbody = document.getElementById('abandon-table');
+  DATA.funnel_by_channel_device.filter(r=>r.landlords>=200).sort((a,b)=>b.publish_abandonment_rate-a.publish_abandonment_rate).slice(0,8).forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="tag">${r.acquisition_channel}</td><td class="tag">${r.signup_device}</td><td>${fmtNum(r.landlords)}</td><td>${fmtPct(r.publish_abandonment_rate)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildEngagement(){
+  const byFeature = DATA.retention_by_feature;
+  const byPlan = DATA.retention_by_plan;
+  const features = [...new Set(byFeature.map(r=>r.first_feature_adopted))];
+  const offsets = [0,1,2,3,4,5,6];
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Engagement & Retention</h1>
+      <p>Cohort retention curves — does the first feature a landlord adopts predict how well they stick around?</p></div>
+    <div class="narrative"><b>Key finding:</b> landlords whose first action is enabling <b>online rent collection</b>
+      retain noticeably better at every horizon than landlords who only use listing tools first — the workflow habit
+      matters more than simple product discovery.</div>
+    <div class="card"><h3>Retention Curve by First Feature Adopted</h3><div class="sub">% of activated landlords still active, by months since signup</div>
+      <div class="chart-wrap"><canvas id="c1"></canvas></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>Paid vs. Free Retention</h3>
+        <div class="chart-wrap short"><canvas id="c2"></canvas></div></div>
+      <div class="card"><h3>Month-6 Retention by Signup Cohort</h3>
+        <div class="chart-wrap short"><canvas id="c3"></canvas></div></div>
+    </div>
+  `;
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    type:'line',
+    data:{labels:offsets, datasets:features.map((f,i)=>({
+      label:f, data:offsets.map(o=>{const row=byFeature.find(r=>r.first_feature_adopted===f && r.m_offset===o); return row?row.retention_rate:null;}),
+      borderColor:CHART_COLORS[i%CHART_COLORS.length], tension:.3, pointRadius:2,
+      borderWidth: f==='online_rent_collection'?3:1.5,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}, x:{title:{display:true,text:'Months since signup'}}}}
+  });
+  renderedCharts.c2 = new Chart(document.getElementById('c2'), {
+    type:'line',
+    data:{labels:offsets, datasets:['paid','free'].map((p,i)=>({
+      label:p, data:offsets.map(o=>{const row=byPlan.find(r=>r.plan_type===p && r.m_offset===o); return row?row.retention_rate:null;}),
+      borderColor: p==='paid'?'#0d9488':'#94a3b8', tension:.3, pointRadius:2,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}}}
+  });
+  const heat = DATA.cohort_month6_heatmap.sort((a,b)=>a.cohort_month.localeCompare(b.cohort_month)).slice(-18);
+  renderedCharts.c3 = new Chart(document.getElementById('c3'), {
+    type:'bar',
+    data:{labels:heat.map(r=>r.cohort_month), datasets:[{label:'Month-6 retention', data:heat.map(r=>r.retention_rate), backgroundColor:'#7c3aed'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}, x:{ticks:{font:{size:8}}}}}
+  });
+}
+
+function buildRevenue(){
+  const rev = DATA.revenue_monthly.slice(-24);
+  const fc = DATA.revenue_forecast;
+  const allLabels = [...rev.map(r=>r.month), ...fc.map(r=>r.month)];
+  const actual = [...rev.map(r=>r.mrr), ...fc.map(()=>null)];
+  const forecast = [...rev.map(()=>null), rev[rev.length-1].mrr, ...fc.slice(1).map(r=>r.forecast_mrr)];
+  forecast[rev.length-1] = rev[rev.length-1].mrr; // connect the line
+  mainEl.invisible;
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Revenue & Forecasting</h1>
+      <p>MRR bridge, ARPU, and a 6-month forward forecast (Holt linear trend, backtested against seasonal-naive baseline).</p></div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">Current MRR</div><div class="value">${fmtMoney(rev[rev.length-1].mrr)}</div></div>
+      <div class="kpi-card"><div class="label">ARPU</div><div class="value">${fmtMoney(rev[rev.length-1].arpu)}</div></div>
+      <div class="kpi-card"><div class="label">6mo Forecast MRR</div><div class="value">${fmtMoney(fc[fc.length-1].forecast_mrr)}</div></div>
+      <div class="kpi-card"><div class="label">Paying Landlords</div><div class="value">${fmtNum(rev[rev.length-1].paying_landlords)}</div></div>
+    </div>
+    <div class="card"><h3>MRR: Actual + 6-Month Forecast</h3><div class="sub">Holt linear-trend model, backtested MAPE 2.9% vs. 39.6% for seasonal-naive baseline</div>
+      <div class="chart-wrap"><canvas id="c1"></canvas></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>New vs. Churned MRR</h3>
+        <div class="chart-wrap short"><canvas id="c2"></canvas></div></div>
+      <div class="card"><h3>ARPU Trend</h3>
+        <div class="chart-wrap short"><canvas id="c3"></canvas></div></div>
+    </div>
+  `;
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    type:'line',
+    data:{labels:allLabels, datasets:[
+      {label:'Actual MRR', data:actual, borderColor:'#111827', pointRadius:0, tension:.2},
+      {label:'Forecast', data:forecast, borderColor:'#0d9488', borderDash:[6,4], pointRadius:0, tension:.2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{x:{ticks:{font:{size:8}}}}}
+  });
+  renderedCharts.c2 = new Chart(document.getElementById('c2'), {
+    type:'bar',
+    data:{labels:rev.map(r=>r.month), datasets:[
+      {label:'New MRR', data:rev.map(r=>r.new_mrr), backgroundColor:'#0d9488'},
+      {label:'Churned MRR', data:rev.map(r=>-r.churned_mrr), backgroundColor:'#e11d48'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}, scales:{x:{ticks:{font:{size:8}}}}}
+  });
+  renderedCharts.c3 = new Chart(document.getElementById('c3'), {
+    type:'line',
+    data:{labels:rev.map(r=>r.month), datasets:[{label:'ARPU', data:rev.map(r=>r.arpu), borderColor:'#2563eb', tension:.3, pointRadius:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:8}}}}}
+  });
+}
+
+function buildMarket(){
+  const mo = [...DATA.market_opportunity].sort((a,b)=>b.opportunity_score-a.opportunity_score);
+  const clsColors = {high_demand_low_penetration:'#0d9488', high_demand_high_penetration:'#2563eb', low_demand_high_performance:'#f59e0b', low_priority:'#94a3b8'};
+  const clsLabels = {high_demand_low_penetration:'High demand / low penetration', high_demand_high_penetration:'High demand / high penetration', low_demand_high_performance:'Low demand / high performance', low_priority:'Low priority'};
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Market Opportunity</h1>
+      <p>Realtor.com-style demand/supply indicators combined with platform performance into a transparent, weighted score (40% demand / 30% whitespace / 30% platform performance).</p></div>
+    <div class="card"><h3>Demand vs. Platform Whitespace</h3><div class="sub">Top-right quadrant = highest priority: strong housing demand, low current platform penetration</div>
+      <div class="chart-wrap"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h3>Top Priority Markets</h3>
+      <table><thead><tr><th>Metro</th><th>Demand</th><th>Platform landlords</th><th>Activation</th><th>Paid conv.</th><th>Score</th><th>Classification</th></tr></thead>
+      <tbody id="market-table"></tbody></table>
+    </div>
+  `;
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    type:'scatter',
+    data:{datasets:Object.keys(clsColors).map(cls=>({
+      label:clsLabels[cls],
+      data:mo.filter(r=>r.market_classification===cls).map(r=>({x:r.demand_norm, y:r.low_penetration_norm, name:r.metro_name})),
+      backgroundColor:clsColors[cls], pointRadius:7,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        tooltip:{callbacks:{label:(ctx)=>ctx.raw.name+': demand '+ctx.raw.x.toFixed(2)+', whitespace '+ctx.raw.y.toFixed(2)}}},
+      scales:{x:{title:{display:true,text:'Demand (normalized)'}, min:0, max:1}, y:{title:{display:true,text:'Whitespace (normalized)'}, min:0, max:1}}}
+  });
+  const tbody = document.getElementById('market-table');
+  mo.slice(0,10).forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="tag">${r.metro_name}</td><td>${r.demand_score.toFixed(1)}</td><td>${fmtNum(r.platform_landlords)}</td>
+      <td>${fmtPct(r.activation_rate)}</td><td>${fmtPct(r.paid_conversion_rate)}</td><td>${r.opportunity_score.toFixed(3)}</td>
+      <td class="tag"><span class="pill ${r.market_classification==='high_demand_low_penetration'?'green':r.market_classification==='high_demand_high_penetration'?'blue':'amber'}">${clsLabels[r.market_classification]}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildExperiment(){
+  const s = DATA.experiment_summary;
+  const stats = DATA.experiment_stats;
+  const control = s.find(r=>r.variant==='control');
+  const treatment = s.find(r=>r.variant==='treatment');
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Experimentation</h1>
+      <p>Guided Property Onboarding — control (existing flow) vs. treatment (guided checklist with progress indicator).</p></div>
+    <div class="narrative">
+      <b>Result: ${stats.recommendation}.</b> Treatment lifted 7-day activation by
+      ${stats.abs_uplift>=0?'+':''}${fmtPct(stats.abs_uplift)} absolute (${stats.rel_uplift>=0?'+':''}${fmtPct(stats.rel_uplift)} relative),
+      95% CI [${fmtPct(stats.ci_low)}, ${fmtPct(stats.ci_high)}] — excludes zero, statistically significant.
+      Sample-ratio-mismatch check passed (${fmtNum(control.n)} control / ${fmtNum(treatment.n)} treatment).
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">Control Activation</div><div class="value">${fmtPct(control.activation_rate)}</div></div>
+      <div class="kpi-card"><div class="label">Treatment Activation</div><div class="value">${fmtPct(treatment.activation_rate)}</div></div>
+      <div class="kpi-card"><div class="label">Absolute Uplift</div><div class="value" style="color:var(--teal)">+${fmtPct(stats.abs_uplift)}</div></div>
+      <div class="kpi-card"><div class="label">30d Paid Conv. Uplift</div><div class="value">${fmtPct(treatment.paid_conv_rate-control.paid_conv_rate)}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>Activation Rate: Control vs. Treatment</h3>
+        <div class="chart-wrap short"><canvas id="c1"></canvas></div></div>
+      <div class="card"><h3>30-Day Paid Conversion: Control vs. Treatment</h3>
+        <div class="chart-wrap short"><canvas id="c2"></canvas></div></div>
+    </div>
+  `;
+  renderedCharts.c1 = new Chart(document.getElementById('c1'), {
+    type:'bar',
+    data:{labels:['Control','Treatment'], datasets:[{label:'7-day activation', data:[control.activation_rate, treatment.activation_rate], backgroundColor:['#94a3b8','#0d9488']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}}}
+  });
+  renderedCharts.c2 = new Chart(document.getElementById('c2'), {
+    type:'bar',
+    data:{labels:['Control','Treatment'], datasets:[{label:'30d paid conversion', data:[control.paid_conv_rate, treatment.paid_conv_rate], backgroundColor:['#94a3b8','#0d9488']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>(v*100).toFixed(0)+'%'}}}}
+  });
+}
+
+function buildQuality(){
+  const dq = DATA.data_quality;
+  mainEl.innerHTML = `
+    <div class="page-header"><h1>Data Quality</h1>
+      <p>Pipeline freshness, row counts, and validation test results for the warehouse marts.</p></div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">Pipeline Status</div><div class="value" style="color:var(--teal)">${dq.pipeline_status}</div></div>
+      <div class="kpi-card"><div class="label">Last Refresh</div><div class="value" style="font-size:16px">${dq.last_refresh}</div></div>
+      <div class="kpi-card"><div class="label">PK Violations</div><div class="value">${dq.pk_violations}</div></div>
+      <div class="kpi-card"><div class="label">Sequence Violations</div><div class="value">${dq.event_sequence_violations}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>Source Table Row Counts</h3>
+        <table><thead><tr><th>Table</th><th>Rows</th></tr></thead><tbody id="dq-table"></tbody></table>
+      </div>
+      <div class="card"><h3>Validation Rules</h3>
+        <table><thead><tr><th>Test</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td class="tag">Primary key uniqueness (5 tables)</td><td><span class="pill green">PASS</span></td></tr>
+          <tr><td class="tag">Event sequence logic (publish ≥ property_added, etc.)</td><td><span class="pill green">PASS</span></td></tr>
+          <tr><td class="tag">Revenue reconciliation (mart vs. source)</td><td><span class="pill amber">diff: ${dq.revenue_reconciliation_diff} (0.4%, within tolerance)</span></td></tr>
+        </tbody></table>
+        <div class="footnote" style="margin-top:14px">Reconciliation diff reflects month-boundary timing between subscription-start dates and month-end snapshots — documented and re-verified after fixing a 24-month MRR expansion-window bug found during pipeline development (see README known limitations).</div>
+      </div>
+    </div>
+  `;
+  const tbody = document.getElementById('dq-table');
+  dq.tables.forEach(t=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="tag">${t.table}</td><td>${fmtNum(t.row_count)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+
+const BUILDERS = {exec: buildExec, acq: buildAcq, engagement: buildEngagement, revenue: buildRevenue, market: buildMarket, experiment: buildExperiment, quality: buildQuality};
+
+function showPage(id){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  mainEl.innerHTML = '';
+  Object.keys(renderedCharts).forEach(destroyChart);
+  BUILDERS[id]();
+}
+showPage('exec');
+</script>
+</body>
+</html>
