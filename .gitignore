@@ -8,3 +8,6 @@ __pycache__/
 .env
 
 .venv/
+
+*.zip
+/rental_marketplace_dashboard.html
